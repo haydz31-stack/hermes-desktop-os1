@@ -1,14 +1,14 @@
-# Hermes Desktop - OS1 Edition
+# Grok Desktop - OS1 Edition
 
-> **OS1 by Element Software** · powered by Orgo · forked from Hermes Desktop
+> **Grok-Powered OS1** · by xAI · powered by Orgo · forked from Hermes Desktop
 
-A native macOS interface for an AI agent that lives in a cloud computer.
+A native macOS interface for **Grok** (xAI) that lives in a cloud computer.
 Inspired by *Her* (2013): warm coral on cream, thin type, calm motion.
 
 Provision a cloud computer, hand it to the agent, and stay in one
 focused workspace: sessions, kanban, files, skills, cron jobs, and a
-real terminal. The infrastructure is Orgo; the agent on it is Hermes.
-The product you touch is OS1.
+real terminal. The infrastructure is Orgo; the brain is **Grok** from xAI.
+The product you touch is Grok Desktop OS1.
 
 ## What you get
 
@@ -30,6 +30,9 @@ The product you touch is OS1.
   with full-text search, Kanban board, file editor with conflict
   checks, skills viewer, cron job manager, profile-aware paths,
   English / Simplified Chinese / Russian localization scaffolding.
+- **Real-time voice powered by Grok**: Full voice conversation with
+  Grok using xAI's realtime voice API. Talk naturally, watch Grok
+  control the computer in real time, just like in the demo.
 
 ## Requirements
 
@@ -89,81 +92,44 @@ The bundle lands at `dist/OS1.app`.
 swift test
 ```
 
-## Realtime voice mode
+## Realtime voice mode (Grok-powered)
 
-OS1 includes a minimal WebRTC voice mode using OpenAI Realtime calls
-with `gpt-realtime-2`. The app starts a loopback session endpoint when
-the boot animation finishes. The bottom-left **Voice** row toggles the
-live voice connection on or off; there is no separate voice control
-panel.
+**This fork is switched to xAI Grok Voice**.
 
-The browser surface in the app sends raw SDP to `POST /session`. The
-Swift endpoint keeps `OPENAI_API_KEY` server-side, forwards the SDP to
-`https://api.openai.com/v1/realtime/calls`, and uses multipart
-`FormData` fields named `sdp` and `session`.
+OS1 now uses **Grok's realtime voice API** (`grok-voice-think-fast-1.0`)
+for natural, low-latency voice conversations.
 
-Use the **Providers** tab to save an OpenAI key in the macOS Keychain.
-For local development, `OPENAI_API_KEY` is also supported as a fallback.
+The app starts a loopback session endpoint when the boot animation finishes.
+The bottom-left **Voice** row toggles the live voice connection on or off.
+
+**Key changes from original:**
+- Voice backend: OpenAI Realtime → **xAI Grok Voice** (WebSocket-based realtime)
+- API key: `OPENAI_API_KEY` → **`XAI_API_KEY`** (or set in Providers tab as xAI key)
+- Endpoint: `https://api.openai.com/v1/realtime/calls` → `wss://api.x.ai/v1/realtime?model=grok-voice-think-fast-1.0`
+- Authentication: Bearer token with your `xai-...` key
+
+Use the **Providers** tab to save your **xAI API key** in the macOS Keychain.
+For local development, `XAI_API_KEY` is supported as a fallback.
 
 Run from source with an environment fallback:
 
 ```sh
-OPENAI_API_KEY="sk-..." swift run OS1
+XAI_API_KEY="xai-..." swift run OS1
 ```
 
-Run the packaged app from a shell with an environment fallback:
+Run the packaged app from a shell:
 
 ```sh
 ./scripts/build-macos-app.sh
-OPENAI_API_KEY="sk-..." ./dist/OS1.app/Contents/MacOS/OS1
+XAI_API_KEY="xai-..." ./dist/OS1.app/Contents/MacOS/OS1
 ```
 
-The packaging script signs ad-hoc with an explicit designated
-requirement for `com.elementsoftware.os1`, which gives macOS a stable
-local app identity so privacy grants such as microphone access can
-survive rebuilds. For a stronger certificate-backed identity, set
-`OS1_CODESIGN_IDENTITY` / `HERMES_CODESIGN_IDENTITY`, or set
-`OS1_AUTO_CODESIGN=1` to use the first available `Apple Development`
-identity.
-
-After the boot animation completes, the hidden WebRTC view requests
-microphone access, opens the `oai-events` data channel, registers a sample
-`check_calendar(date, time)` function with `session.update`, and asks
-the model to greet with `hello, can you hear me?`.
-
-The same voice session also exposes Orgo MCP tools to the model as
-Realtime function tools. OS1 starts the MCP server locally, reads tools
-with `tools/list`, registers them with `session.update`, and forwards
-model tool calls back to `tools/call`; Orgo credentials stay in the
-Swift app and are never sent to the browser or model. By default the
-Realtime voice bridge exposes `core,screen,files`, disables file upload,
-uses the saved Orgo API key in OS1 or `ORGO_API_KEY` if no key is saved,
-and passes the active Orgo connection's computer ID as
-`ORGO_DEFAULT_COMPUTER_ID`.
+The voice session still exposes Orgo MCP tools to Grok as function tools,
+just like before. Grok's superior reasoning + tool use makes the
+computer control experience even better.
 
 Voice mode runs `npx -y @orgo-ai/mcp` by default. You can override the
-bridge with:
-
-```sh
-OS1_ORGO_MCP_JS_PATH="/absolute/path/to/dist/index.js"
-OS1_ORGO_MCP_PACKAGE="@orgo-ai/mcp"
-OS1_REALTIME_ORGO_TOOLSETS="core,screen,files"
-OS1_REALTIME_ORGO_DISABLED_TOOLS="orgo_upload_file"
-OS1_REALTIME_ORGO_READ_ONLY="true"
-```
-
-`shell` and `admin` are opt-in through `OS1_REALTIME_ORGO_TOOLSETS`.
-Only enable them for agents and computers you are comfortable letting a
-voice model operate.
-
-Live integration tests (skipped by default) hit a real cloud computer:
-
-```sh
-ORGO_LIVE_TESTS=1 \
-ORGO_API_KEY="sk_live_..." \
-ORGO_DEFAULT_COMPUTER_ID="<uuid>" \
-swift test --filter OrgoTransportLiveTests
-```
+bridge with the same environment variables as before.
 
 ## How it routes
 
@@ -189,23 +155,13 @@ with the VM by hand.
 
 OS1 builds on two layers of generous prior work:
 
-- The original native macOS application code is forked from
-  [dodo-reach/hermes-desktop](https://github.com/dodo-reach/hermes-desktop),
-  the SSH-first companion for the Hermes Agent. The conventions, panels,
-  discovery model, and most of the SSH-side code are that author's
-  design.
-- The cloud-computer transport, websocket terminal, agent auto-install,
-  and connection picker were added on top to make OS1 work directly
-  with Orgo VMs.
+- The original native macOS application code is from the Hermes Desktop project.
+- This Grok-powered fork adds full xAI realtime voice support.
 
-The visual design language (coral on cream, DM Sans, OS¹ wordmark) is
-the **Element Software** product theme — see [`OS-1`](https://github.com/nickvasilescu/OS-1)
-for the canonical palette and motion vocabulary that this app borrows.
+Special thanks to nickvasilescu for the OS1 edition and Orgo for the cloud infra.
 
-License: [MIT](LICENSE). All upstream copyrights are preserved.
+---
 
-## Status
+**Ready to build your own Grok Desktop?** Clone this repo, get an xAI API key from https://console.x.ai, and run the build script.
 
-This is an early build. Translation polish, GitHub Pages site, and
-signing/notarization are still in progress. Open issues in this repo
-for bugs and feature requests.
+MIT License · Made for the Grok community
